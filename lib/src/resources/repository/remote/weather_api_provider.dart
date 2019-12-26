@@ -75,32 +75,38 @@ class WeatherApiProvider {
   void setupInterceptors() {
     int maxCharactersPerLine = 200;
 
-    _dio.interceptor.request.onSend = (Options options) {
-      _logger.fine("--> ${options.method} ${options.path}");
-      _logger.fine("Content type: ${options.contentType}");
-      _logger.fine("<-- END HTTP");
-      return options;
-    };
-
-    _dio.interceptor.response.onSuccess = (Response response) {
-      _logger.fine(
-          "<-- ${response.statusCode} ${response.request.method} ${response.request.path}");
-      String responseAsString = response.data.toString();
-      if (responseAsString.length > maxCharactersPerLine) {
-        int iterations =
+    _dio.interceptors.add(InterceptorsWrapper(
+        onRequest:(RequestOptions options) async {
+          _logger.fine("--> ${options.method} ${options.path}");
+          _logger.fine("Content type: ${options.contentType}");
+          _logger.fine("<-- END HTTP");
+          return options;
+        },
+        onResponse:(Response response) async {
+          _logger.fine(
+              "<-- ${response.statusCode} ${response.request.method} ${response.request.path}");
+          String responseAsString = response.data.toString();
+          if (responseAsString.length > maxCharactersPerLine) {
+            int iterations =
             (responseAsString.length / maxCharactersPerLine).floor();
-        for (int i = 0; i <= iterations; i++) {
-          int endingIndex = i * maxCharactersPerLine + maxCharactersPerLine;
-          if (endingIndex > responseAsString.length) {
-            endingIndex = responseAsString.length;
+            for (int i = 0; i <= iterations; i++) {
+              int endingIndex = i * maxCharactersPerLine + maxCharactersPerLine;
+              if (endingIndex > responseAsString.length) {
+                endingIndex = responseAsString.length;
+              }
+              _logger.fine(responseAsString.substring(
+                  i * maxCharactersPerLine, endingIndex));
+            }
+          } else {
+            _logger.fine(response.data);
           }
-          _logger.fine(responseAsString.substring(
-              i * maxCharactersPerLine, endingIndex));
+          _logger.fine("<-- END HTTP");
+          return response; // continue
+        },
+        onError: (DioError e) async {
+          // Do something with response error
+          return  e;//continue
         }
-      } else {
-        _logger.fine(response.data);
-      }
-      _logger.fine("<-- END HTTP");
-    };
+    ));
   }
 }
